@@ -1,27 +1,25 @@
-From 0317e6ba6aa4adc71f645b7da5318f4caa69267e Mon Sep 17 00:00:00 2001
+From 7e975d9b537f9aeadbf13bede10c6b5e5fb47a1d Mon Sep 17 00:00:00 2001
 From: John Johansen <john.johansen@canonical.com>
-Date: Mon, 4 Oct 2010 15:03:36 -0700
-Subject: [PATCH 2/6] UBUNTU: SAUCE: AppArmor: basic networking rules
+Date: Mon, 04 Oct 2010 22:03:36 +0000
+Subject: UBUNTU: SAUCE: AppArmor: basic networking rules
 
 Base support for network mediation.
 
 Signed-off-by: John Johansen <john.johansen@canonical.com>
 ---
- security/apparmor/Makefile         |   42 +++++++++-
- security/apparmor/apparmorfs.c     |    1 +
- security/apparmor/include/audit.h  |    4 +
- security/apparmor/include/net.h    |   44 ++++++++++
- security/apparmor/include/policy.h |    3 +
- security/apparmor/lsm.c            |  112 +++++++++++++++++++++++++
- security/apparmor/net.c            |  162 ++++++++++++++++++++++++++++++++++++
- security/apparmor/policy.c         |    1 +
- security/apparmor/policy_unpack.c  |   46 ++++++++++
- 10 files changed, 414 insertions(+), 3 deletions(-)
- create mode 100644 security/apparmor/include/net.h
- create mode 100644 security/apparmor/net.c
-
+diff --git a/security/apparmor/.gitignore b/security/apparmor/.gitignore
+index 9cdec70..d5b291e 100644
+--- a/security/apparmor/.gitignore
++++ b/security/apparmor/.gitignore
+@@ -1,5 +1,6 @@
+ #
+ # Generated include files
+ #
++net_names.h
+ capability_names.h
+ rlim_names.h
 diff --git a/security/apparmor/Makefile b/security/apparmor/Makefile
-index 806bd19..19daa85 100644
+index 5706b74..e270692 100644
 --- a/security/apparmor/Makefile
 +++ b/security/apparmor/Makefile
 @@ -4,9 +4,9 @@ obj-$(CONFIG_SECURITY_APPARMOR) += apparmor.o
@@ -81,10 +79,10 @@ index 806bd19..19daa85 100644
  $(obj)/capability.o : $(obj)/capability_names.h
 +$(obj)/net.o : $(obj)/net_names.h
  $(obj)/resource.o : $(obj)/rlim_names.h
- $(obj)/capability_names.h : $(srctree)/include/linux/capability.h \
+ $(obj)/capability_names.h : $(srctree)/include/uapi/linux/capability.h \
  			    $(src)/Makefile
-@@ -63,3 +96,8 @@ $(obj)/capability_names.h : $(srctree)/include/linux/capability.h \
- $(obj)/rlim_names.h : $(srctree)/include/asm-generic/resource.h \
+@@ -63,3 +96,8 @@ $(obj)/capability_names.h : $(srctree)/include/uapi/linux/capability.h \
+ $(obj)/rlim_names.h : $(srctree)/include/uapi/asm-generic/resource.h \
  		      $(src)/Makefile
  	$(call cmd,make-rlim)
 +$(obj)/net_names.h : $(srctree)/include/linux/socket.h \
@@ -105,12 +103,12 @@ index 42b7c9f..114fb23 100644
  	AA_FS_DIR("rlimit",			aa_fs_entry_rlimit),
  	{ }
 diff --git a/security/apparmor/include/audit.h b/security/apparmor/include/audit.h
-index 4b7e189..17734f9 100644
+index 69d8cae..4af6523 100644
 --- a/security/apparmor/include/audit.h
 +++ b/security/apparmor/include/audit.h
 @@ -127,6 +127,10 @@ struct apparmor_audit_data {
  			u32 denied;
- 			uid_t ouid;
+ 			kuid_t ouid;
  		} fs;
 +		struct {
 +			int type, protocol;
@@ -198,7 +196,7 @@ index bda4569..eb13a73 100644
  };
  
 diff --git a/security/apparmor/lsm.c b/security/apparmor/lsm.c
-index 8ea39aa..f628734 100644
+index 8c2a7f6..dcb578e 100644
 --- a/security/apparmor/lsm.c
 +++ b/security/apparmor/lsm.c
 @@ -32,6 +32,7 @@
@@ -209,7 +207,7 @@ index 8ea39aa..f628734 100644
  #include "include/path.h"
  #include "include/policy.h"
  #include "include/procattr.h"
-@@ -614,6 +615,104 @@
+@@ -614,6 +615,104 @@ static int apparmor_task_setrlimit(struct task_struct *task,
  	return error;
  }
  
@@ -314,7 +312,7 @@ index 8ea39aa..f628734 100644
  static struct security_operations apparmor_ops __read_only = {
  	.name =				"apparmor",
  
-@@ -646,6 +745,19 @@
+@@ -646,6 +745,19 @@ static struct security_operations apparmor_ops = {
  	.getprocattr =			apparmor_getprocattr,
  	.setprocattr =			apparmor_setprocattr,
  
@@ -503,10 +501,10 @@ index 0000000..003dd18
 +	return error;
 +}
 diff --git a/security/apparmor/policy.c b/security/apparmor/policy.c
-index cf5fd22..27c8161 100644
+index 8132003..56e5304 100644
 --- a/security/apparmor/policy.c
 +++ b/security/apparmor/policy.c
-@@ -745,6 +745,7 @@ static void free_profile(struct aa_profile *profile)
+@@ -747,6 +747,7 @@ static void free_profile(struct aa_profile *profile)
  
  	aa_free_file_rules(&profile->file);
  	aa_free_cap_rules(&profile->caps);
@@ -538,14 +536,6 @@ index 329b1fd..1b90dfa 100644
  static bool unpack_u32(struct aa_ext *e, u32 *data, const char *name)
  {
  	if (unpack_nameX(e, AA_U32, name)) {
-@@ -471,6 +484,7 @@ static struct aa_profile *unpack_profile(struct aa_ext *e)
- {
- 	struct aa_profile *profile = NULL;
- 	const char *name = NULL;
-+	size_t size = 0;
- 	int i, error = -EPROTO;
- 	kernel_cap_t tmpcap;
- 	u32 tmp;
 @@ -564,6 +578,38 @@ static struct aa_profile *unpack_profile(struct aa_ext *e)
  	if (!unpack_rlimits(e, profile))
  		goto fail;
@@ -585,6 +575,5 @@ index 329b1fd..1b90dfa 100644
  	if (unpack_nameX(e, AA_STRUCT, "policydb")) {
  		/* generic policy dfa - optional and may be NULL */
  		profile->policy.dfa = unpack_dfa(e);
--- 
-1.7.10.4
-
+--
+cgit v0.9.1

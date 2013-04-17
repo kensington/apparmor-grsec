@@ -1,0 +1,10 @@
+--- a/security/apparmor/policy_unpack.c
++++ b/security/apparmor/policy_unpack.c
+@@ -484,6 +484,7 @@
+ {
+ 	struct aa_profile *profile = NULL;
+ 	const char *name = NULL;
++	size_t size = 0;
+ 	int i, error = -EPROTO;
+ 	kernel_cap_t tmpcap;
+ 	u32 tmp;

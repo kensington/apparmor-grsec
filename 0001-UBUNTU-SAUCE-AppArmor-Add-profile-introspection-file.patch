@@ -1,8 +1,7 @@
-From 259cf7251194d81a4a3c4e6d76c2cf9e38d5647d Mon Sep 17 00:00:00 2001
+From 301639739c56c36bcbe90000934fedb416a65019 Mon Sep 17 00:00:00 2001
 From: John Johansen <john.johansen@canonical.com>
-Date: Thu, 22 Jul 2010 02:32:02 -0700
-Subject: [PATCH 1/6] UBUNTU: SAUCE: AppArmor: Add profile introspection file
- to interface
+Date: Thu, 22 Jul 2010 09:32:02 +0000
+Subject: UBUNTU: SAUCE: AppArmor: Add profile introspection file to interface
 
 Add the dynamic profiles file to the interace, to allow load policy
 introspection.
@@ -10,10 +9,6 @@ introspection.
 Signed-off-by: John Johansen <john.johansen@canonical.com>
 Acked-by: Kees Cook <kees@ubuntu.com>
 ---
- security/apparmor/Kconfig      |    9 ++
- security/apparmor/apparmorfs.c |  231 ++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 240 insertions(+)
-
 diff --git a/security/apparmor/Kconfig b/security/apparmor/Kconfig
 index 9b9013b..51ebf96 100644
 --- a/security/apparmor/Kconfig
@@ -280,6 +275,5 @@ index 16c15ec..42b7c9f 100644
  	AA_FS_DIR("features", aa_fs_entry_features),
  	{ }
  };
--- 
-1.7.10.4
-
+--
+cgit v0.9.1

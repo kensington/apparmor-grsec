@@ -1,8 +1,7 @@
-From b1cb9d1b4f0d585c271c584da954d9eb2e347b40 Mon Sep 17 00:00:00 2001
+From c7208a008f899194674c77b424ea8386ec2fb413 Mon Sep 17 00:00:00 2001
 From: John Johansen <john.johansen@canonical.com>
-Date: Fri, 29 Jun 2012 17:34:00 -0700
-Subject: [PATCH 3/6] apparmor: Fix quieting of audit messages for network
- mediation
+Date: Sat, 30 Jun 2012 00:34:00 +0000
+Subject: apparmor: Fix quieting of audit messages for network mediation
 
 If a profile specified a quieting of network denials for a given rule by
 either the quiet or deny rule qualifiers, the resultant quiet mask for
@@ -17,9 +16,6 @@ denied requests was applied incorrectly, resulting in two potential bugs.
 
 Signed-off-by: John Johansen <john.johansen@canonical.com>
 ---
- security/apparmor/net.c |    2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
 diff --git a/security/apparmor/net.c b/security/apparmor/net.c
 index 003dd18..6e6e5c9 100644
 --- a/security/apparmor/net.c
@@ -33,6 +29,5 @@ index 003dd18..6e6e5c9 100644
  
  		if (denied & kill_mask)
  			audit_type = AUDIT_APPARMOR_KILL;
--- 
-1.7.10.4
-
+--
+cgit v0.9.1
